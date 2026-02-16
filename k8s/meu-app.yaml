@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: monitor-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: monitor-read-pods
+subjects:
+- kind: ServiceAccount
+  name: monitor-sa
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: view
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: projeto-devops
+spec:
+  # O HPA passará a controlar as réplicas, então o valor aqui é apenas o inicial
+  replicas: 2 
+  selector:
+    matchLabels:
+      app: web-server
+  template:
+    metadata:
+      labels:
+        app: web-server
+    spec:
+      serviceAccountName: monitor-sa
+      containers:
+      - name: nginx-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        # ESSA PARTE É OBRIGATÓRIA PARA O HPA FUNCIONAR
+        resources:
+          requests:
+            cpu: "20m"      # O que o Pod reserva (0.1 CPU)
+            memory: "32Mi"
+          limits:
+            cpu: "20m"      # O teto máximo que ele pode usar
+            memory: "64Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: projeto-devops-service
+spec:
+  selector:
+    app: web-server
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: NodePort
+---
+# ESTA É A CONFIGURAÇÃO DO HPA
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: projeto-devops-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: projeto-devops
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50 # Se passar de 50% de uso, ele cria novos Pods
