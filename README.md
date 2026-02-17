@@ -61,6 +61,6 @@ Aplicação de boas práticas de infraestrutura imutável e escalável.
 ## 🤝 Contato
 Para mais informações, sugestões ou oportunidades:
 
-## 🔗 GitHub: **https://github.com/ViniciusFroggel/Kubernetes-project**
+## 🔗 Autor: **Vinicius froggel**
 
 ![alt text](image.png)
